@@ -1,0 +1,62 @@
+USE version 7.5.0, Copyright (C) 1999-2024 University of Bremen
+-- Execution log: use -nogui models/cropyield.use models/scenarios.soil
+
+-- Scenario A (positive control)
+scenarios.soil> check -d
+checking structure...
+checked structure in 1ms.
+checking invariants...
+checking invariant (1) `FieldPlot::positiveCadastralArea': OK.
+checking invariant (2) `HarvestOperation::temporalSeasonContainment': OK.
+checking invariant (3) `YieldMeasurement::biologicalYieldLimit': OK.
+checking invariant (4) `YieldMeasurement::positivePhysicalQuantities': OK.
+checking invariant (5) `YieldMeasurement::spatialPlotContainment': OK.
+checking invariant (6) `YieldMeasurement::standardizedYieldConsistency': OK.
+checking invariant (7) `YieldMeasurement::validMoistureRange': OK.
+checked 7 invariants in 0.011s, 0 failures.
+
+-- Scenario B (negative control: moisture sensor drop, biological ceiling surge, off-season date)
+scenarios.soil> check -d
+checking structure...
+checked structure in 0ms.
+checking invariants...
+checking invariant (1) `FieldPlot::positiveCadastralArea': OK.
+checking invariant (2) `HarvestOperation::temporalSeasonContainment': FAILED.
+  -> false : Boolean
+Instances of HarvestOperation violating the invariant:
+  -> Set{operacaoColheitaErr} : Set(HarvestOperation)
+checking invariant (3) `YieldMeasurement::biologicalYieldLimit': FAILED.
+  -> false : Boolean
+Instances of YieldMeasurement violating the invariant:
+  -> Set{medicaoRuido} : Set(YieldMeasurement)
+checking invariant (4) `YieldMeasurement::positivePhysicalQuantities': OK.
+checking invariant (5) `YieldMeasurement::spatialPlotContainment': OK.
+checking invariant (6) `YieldMeasurement::standardizedYieldConsistency': OK.
+checking invariant (7) `YieldMeasurement::validMoistureRange': FAILED.
+  -> false : Boolean
+Instances of YieldMeasurement violating the invariant:
+  -> Set{medicaoRuido} : Set(YieldMeasurement)
+checked 7 invariants in 0.004s, 3 failures.
+
+-- Scenario C (negative control: zero harvested area, unadjusted wet yield, zero cadastral area)
+scenarios.soil> check -d
+checking structure...
+checked structure in 0ms.
+checking invariants...
+checking invariant (1) `FieldPlot::positiveCadastralArea': FAILED.
+  -> false : Boolean
+Instances of FieldPlot violating the invariant:
+  -> Set{talhao05} : Set(FieldPlot)
+checking invariant (2) `HarvestOperation::temporalSeasonContainment': OK.
+checking invariant (3) `YieldMeasurement::biologicalYieldLimit': OK.
+checking invariant (4) `YieldMeasurement::positivePhysicalQuantities': FAILED.
+  -> false : Boolean
+Instances of YieldMeasurement violating the invariant:
+  -> Set{medicaoAreaNula} : Set(YieldMeasurement)
+checking invariant (5) `YieldMeasurement::spatialPlotContainment': OK.
+checking invariant (6) `YieldMeasurement::standardizedYieldConsistency': FAILED.
+  -> false : Boolean
+Instances of YieldMeasurement violating the invariant:
+  -> Set{medicaoSemCorrecao} : Set(YieldMeasurement)
+checking invariant (7) `YieldMeasurement::validMoistureRange': OK.
+checked 7 invariants in 0.003s, 3 failures.

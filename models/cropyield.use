@@ -1,0 +1,159 @@
+-- ============================================================================
+-- Ontology-Based Metamodel (OBM) for Crop Yield Calculation
+-- Formal Executable Specification in USE (UML-based Specification Environment)
+-- Reference vocabulary: FAO AGROVOC Multilingual Thesaurus (SKOS-XL)
+-- ============================================================================
+
+model CropYieldOBM
+
+-- ----------------------------------------------------------------------------
+-- 1. Metamodel Metaclasses (M2 Layer anchored in FAO AGROVOC)
+-- ----------------------------------------------------------------------------
+
+-- AGROVOC: c_2809 (farms)
+class Farm
+attributes
+    id : String
+    name : String
+    totalArea : Real
+end
+
+-- AGROVOC: c_2894 (fields)
+class FieldPlot
+attributes
+    id : String
+    code : String
+    boundaryGeoJson : String
+    cadastralArea : Real
+operations
+    -- CONTRACTUAL STUB: USE evaluates OCL over static object snapshots without
+    -- built-in geometric algebra. The body "= true" declares the query contract;
+    -- point-in-polygon ray-casting over boundaryGeoJson is delegated to a GIS
+    -- engine (e.g., JTS/PostGIS) at runtime.
+    containsPoint(lat : Real, lon : Real) : Boolean = true
+end
+
+-- AGROVOC: c_6908 (seasonal cropping)
+-- Dates are represented as ISO-8601 strings ('YYYY-MM-DD'): OCL 2.4 lacks a
+-- primitive Date type, and lexicographical string order in ISO-8601 coincides
+-- with chronological order (Rule 5).
+class Season
+attributes
+    id : String
+    code : String
+    startDate : String
+    endDate : String
+end
+
+-- AGROVOC: c_1972 (crops) — e.g., Glycine max (c_3301), Zea mays (c_8504)
+class Crop
+attributes
+    id : String
+    commonName : String
+    scientificName : String
+    agrovocUri : String
+    standardMoisture : Real
+    maxBiologicalYield : Real
+end
+
+-- AGROVOC: c_3500 (harvesting) + c_3499 (harvesters)
+class HarvestOperation
+attributes
+    id : String
+    operationDate : String
+    machineId : String
+    operatorName : String
+end
+
+-- AGROVOC: c_10176 (crop yield) + c_4639 (mass) + c_330588 (area) + c_4886 (moisture content)
+class YieldMeasurement
+attributes
+    id : String
+    timestamp : String
+    latitude : Real
+    longitude : Real
+    harvestedMass : Real
+    harvestedArea : Real
+    moistureContent : Real
+    rawYield : Real
+    standardizedYield : Real
+operations
+    calculateStandardizedYield() : Real =
+        self.rawYield * (100.0 - self.moistureContent) /
+        (100.0 - self.harvestOperation.crop.standardMoisture)
+end
+
+-- ----------------------------------------------------------------------------
+-- 2. Structural Associations and Multiplicities
+-- ----------------------------------------------------------------------------
+
+composition ConsistsOf between
+    Farm[1] role farm
+    FieldPlot[1..*] role fieldPlots
+end
+
+association Locates between
+    FieldPlot[1] role fieldPlot
+    HarvestOperation[0..*] role harvestOperations
+end
+
+association Spans between
+    Season[1] role season
+    HarvestOperation[0..*] role harvestOperations
+end
+
+association Harvests between
+    Crop[1] role crop
+    HarvestOperation[0..*] role harvestOperations
+end
+
+composition Records between
+    HarvestOperation[1] role harvestOperation
+    YieldMeasurement[1..*] role yieldMeasurements
+end
+
+-- ----------------------------------------------------------------------------
+-- 3. OCL 2.4 Well-Formedness Rules and Semantic Contracts
+-- ----------------------------------------------------------------------------
+
+constraints
+
+context FieldPlot
+    -- 6. [Origin 1: Physical definition] Cadastral area > 0 (ha)
+    inv positiveCadastralArea:
+        self.cadastralArea > 0.0
+
+context HarvestOperation
+    -- 5. [Origin 4: FMIS premise] Date within season (ISO-8601)
+    inv temporalSeasonContainment:
+        self.operationDate >= self.season.startDate and
+        self.operationDate <= self.season.endDate
+
+context YieldMeasurement
+    -- 1. [Origin 1: Physical definition] Positive mass & area
+    inv positivePhysicalQuantities:
+        self.harvestedMass > 0.0 and
+        self.harvestedArea > 0.0
+
+    -- 2. [Origin 4: FMIS premise] Plausible moisture (0..40%)
+    inv validMoistureRange:
+        self.moistureContent > 0.0 and
+        self.moistureContent <= 40.0
+
+    -- 3. [Origin 3: Sudduth MAXY/MINY] Species yield ceiling
+    inv biologicalYieldLimit:
+        self.rawYield > 0.0 and
+        self.rawYield <= self.harvestOperation.crop.maxBiologicalYield
+
+    -- 4. [Origin 2: MAPA IN 11/60] Dry-matter formula (tol. 0.01)
+    inv standardizedYieldConsistency:
+        let expectedYield : Real =
+            self.rawYield * (100.0 - self.moistureContent) /
+            (100.0 - self.harvestOperation.crop.standardMoisture)
+        in
+            (self.standardizedYield - expectedYield).abs() < 0.01
+
+    -- 7. [Origin 3: Sudduth POS] Plot containment (GIS stub)
+    inv spatialPlotContainment:
+        self.harvestOperation.fieldPlot.containsPoint(
+            self.latitude, self.longitude)

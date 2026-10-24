@@ -1,0 +1,178 @@
+-- ============================================================================
+-- Object Instantiation and Fault-Injection Script (SOIL) for USE 7.5.0
+-- Evaluates Scenario A (Positive Control) and Scenarios B & C (Negative Controls)
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Scenario A: Valid Control (Conforming Soybean Harvest Telemetry)
+-- ----------------------------------------------------------------------------
+!create fazendaPrimavera : Farm
+!set fazendaPrimavera.id := 'FARM-BR-01'
+!set fazendaPrimavera.name := 'Fazenda Primavera'
+!set fazendaPrimavera.totalArea := 1200.0
+
+!create talhao04 : FieldPlot
+!set talhao04.id := 'PLOT-04B'
+!set talhao04.code := 'Talhao 04-B'
+!set talhao04.boundaryGeoJson := 'Polygon: Talhao 04-B'
+!set talhao04.cadastralArea := 85.5
+
+!insert (fazendaPrimavera, talhao04) into ConsistsOf
+
+!create safra2324 : Season
+!set safra2324.id := 'SEASON-23-24'
+!set safra2324.code := 'Safra 2023/2024'
+!set safra2324.startDate := '2023-10-01'
+!set safra2324.endDate := '2024-04-30'
+
+!create culturaSoja : Crop
+!set culturaSoja.id := 'CROP-SOY-01'
+!set culturaSoja.commonName := 'Soybean'
+!set culturaSoja.scientificName := 'Glycine max'
+!set culturaSoja.agrovocUri := 'c_3301'
+!set culturaSoja.standardMoisture := 14.0
+!set culturaSoja.maxBiologicalYield := 8000.0
+
+!create operacaoColheita : HarvestOperation
+!set operacaoColheita.id := 'HARV-2024-001'
+!set operacaoColheita.operationDate := '2024-03-15'
+!set operacaoColheita.machineId := 'COLH-JD-S790'
+!set operacaoColheita.operatorName := 'Carlos Mendes'
+
+!insert (talhao04, operacaoColheita) into Locates
+!insert (safra2324, operacaoColheita) into Spans
+!insert (culturaSoja, operacaoColheita) into Harvests
+
+!create medicaoPonto1 : YieldMeasurement
+!set medicaoPonto1.id := 'YIELD-MEAS-001'
+!set medicaoPonto1.timestamp := '2024-03-15 10:14:32'
+!set medicaoPonto1.latitude := -12.4512
+!set medicaoPonto1.longitude := -55.8234
+!set medicaoPonto1.harvestedMass := 19.0
+!set medicaoPonto1.harvestedArea := 50.0
+!set medicaoPonto1.moistureContent := 13.5
+!set medicaoPonto1.rawYield := 3800.0
+!set medicaoPonto1.standardizedYield := 3822.09
+
+!insert (operacaoColheita, medicaoPonto1) into Records
+
+-- Evaluate Scenario A: All 7 invariants must hold (0 violations)
+check -d
+
+-- ----------------------------------------------------------------------------
+-- Scenario B: Negative Control (Sensor Noise & Temporal Out-of-Season Faults)
+-- ----------------------------------------------------------------------------
+!create operacaoColheitaErr : HarvestOperation
+!set operacaoColheitaErr.id := 'HARV-2024-ERR'
+!set operacaoColheitaErr.operationDate := '2024-06-20'
+!set operacaoColheitaErr.machineId := 'COLH-JD-S790'
+!set operacaoColheitaErr.operatorName := 'Carlos Mendes'
+
+!insert (talhao04, operacaoColheitaErr) into Locates
+!insert (safra2324, operacaoColheitaErr) into Spans
+!insert (culturaSoja, operacaoColheitaErr) into Harvests
+
+!create medicaoRuido : YieldMeasurement
+!set medicaoRuido.id := 'YIELD-MEAS-ERR'
+!set medicaoRuido.timestamp := '2024-06-20 16:45:10'
+!set medicaoRuido.latitude := -12.4512
+!set medicaoRuido.longitude := -55.8234
+!set medicaoRuido.harvestedMass := 160.0
+!set medicaoRuido.harvestedArea := 50.0
+!set medicaoRuido.moistureContent := 0.0
+!set medicaoRuido.rawYield := 32000.0
+!set medicaoRuido.standardizedYield := 37209.30
+
+!insert (operacaoColheitaErr, medicaoRuido) into Records
+
+-- Evaluate Scenario B: Must isolate 3 exact violations:
+-- 1. YieldMeasurement::validMoistureRange (moistureContent = 0.0; requires > 0.0)
+-- 2. YieldMeasurement::biologicalYieldLimit (rawYield = 32000.0 > 8000.0)
+-- 3. HarvestOperation::temporalSeasonContainment (2024-06-20 > 2024-04-30)
+check -d
+
+-- ----------------------------------------------------------------------------
+-- Scenario C: Negative Control for Rules 1, 4, and 6
+-- State is reset so violations do not accumulate with Scenario B.
+-- ----------------------------------------------------------------------------
+reset
+
+!create fazendaPrimavera : Farm
+!set fazendaPrimavera.id := 'FARM-BR-01'
+!set fazendaPrimavera.name := 'Fazenda Primavera'
+!set fazendaPrimavera.totalArea := 1200.0
+
+!create talhao04 : FieldPlot
+!set talhao04.id := 'PLOT-04B'
+!set talhao04.code := 'Talhao 04-B'
+!set talhao04.boundaryGeoJson := 'Polygon: Talhao 04-B'
+!set talhao04.cadastralArea := 85.5
+
+-- Plot registered with zero area (corrupted cadastro / degenerate polygon)
+!create talhao05 : FieldPlot
+!set talhao05.id := 'PLOT-05A'
+!set talhao05.code := 'Talhao 05-A'
+!set talhao05.boundaryGeoJson := 'Polygon: Talhao 05-A'
+!set talhao05.cadastralArea := 0.0
+
+!insert (fazendaPrimavera, talhao04) into ConsistsOf
+!insert (fazendaPrimavera, talhao05) into ConsistsOf
+
+!create safra2324 : Season
+!set safra2324.id := 'SEASON-23-24'
+!set safra2324.code := 'Safra 2023/2024'
+!set safra2324.startDate := '2023-10-01'
+!set safra2324.endDate := '2024-04-30'
+
+!create culturaSoja : Crop
+!set culturaSoja.id := 'CROP-SOY-01'
+!set culturaSoja.commonName := 'Soybean'
+!set culturaSoja.scientificName := 'Glycine max'
+!set culturaSoja.agrovocUri := 'c_3301'
+!set culturaSoja.standardMoisture := 14.0
+!set culturaSoja.maxBiologicalYield := 8000.0
+
+!create operacaoColheitaC : HarvestOperation
+!set operacaoColheitaC.id := 'HARV-2024-002'
+!set operacaoColheitaC.operationDate := '2024-03-16'
+!set operacaoColheitaC.machineId := 'COLH-JD-S790'
+!set operacaoColheitaC.operatorName := 'Carlos Mendes'
+
+!insert (talhao04, operacaoColheitaC) into Locates
+!insert (safra2324, operacaoColheitaC) into Spans
+!insert (culturaSoja, operacaoColheitaC) into Harvests
+
+-- Measurement with zero harvested area (combine stop / zeroed swath width)
+!create medicaoAreaNula : YieldMeasurement
+!set medicaoAreaNula.id := 'YIELD-MEAS-C01'
+!set medicaoAreaNula.timestamp := '2024-03-16 09:02:11'
+!set medicaoAreaNula.latitude := -12.4515
+!set medicaoAreaNula.longitude := -55.8231
+!set medicaoAreaNula.harvestedMass := 19.0
+!set medicaoAreaNula.harvestedArea := 0.0
+!set medicaoAreaNula.moistureContent := 13.5
+!set medicaoAreaNula.rawYield := 3800.0
+!set medicaoAreaNula.standardizedYield := 3822.09
+
+!insert (operacaoColheitaC, medicaoAreaNula) into Records
+
+-- Measurement with unadjusted wet yield stored as standardized yield
+-- (standardizedYield = rawYield = 3800.0 instead of 3822.09 kg/ha)
+!create medicaoSemCorrecao : YieldMeasurement
+!set medicaoSemCorrecao.id := 'YIELD-MEAS-C02'
+!set medicaoSemCorrecao.timestamp := '2024-03-16 09:02:12'
+!set medicaoSemCorrecao.latitude := -12.4516
+!set medicaoSemCorrecao.longitude := -55.8231
+!set medicaoSemCorrecao.harvestedMass := 19.0
+!set medicaoSemCorrecao.harvestedArea := 50.0
+!set medicaoSemCorrecao.moistureContent := 13.5
+!set medicaoSemCorrecao.rawYield := 3800.0
+!set medicaoSemCorrecao.standardizedYield := 3800.0
+
+!insert (operacaoColheitaC, medicaoSemCorrecao) into Records
+
+-- Evaluate Scenario C: Must isolate 3 exact violations:
+-- 1. YieldMeasurement::positivePhysicalQuantities (harvestedArea = 0.0)
+-- 2. YieldMeasurement::standardizedYieldConsistency (|3800.0 - 3822.09| = 22.09)
+-- 3. FieldPlot::positiveCadastralArea (talhao05.cadastralArea = 0.0)
+check -d

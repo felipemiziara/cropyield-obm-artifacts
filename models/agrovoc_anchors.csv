@@ -1,0 +1,18 @@
+code,prefLabel_en,prefLabel_pt,elemento_metamodelo,papel,aliases
+c_2809,farms,exploração agrícola,Farm,metaclasse,farm|fazenda|fazendas|explorações|propriedade
+c_2894,fields,campo,FieldPlot,metaclasse,field|talhão|talhões|campos
+c_6908,seasonal cropping,cultivo sazonal,Season,metaclasse,safra|safras|ciclos sazonais|ciclo sazonal|seasons
+c_1972,crops,cultura,Crop,metaclasse,culturas|culturas agrícolas|plantas cultivadas
+c_3500,harvesting,colheita,HarvestOperation,metaclasse,harvest
+c_10176,crop yield,rendimento de cultura,YieldMeasurement,metaclasse,rendimento de culturas|yields|produtividade
+c_4639,mass,massa,harvestedMass,atributo,
+c_330588,area,área (terra),harvestedArea,atributo,área
+c_4886,moisture content,teor em humidade,moistureContent,atributo,teor de umidade|teor em umidade|umidade
+c_3499,harvesters,equipamento de colheita,HarvestOperation (maquinário),exemplo,colheitadeira|colheitadeiras
+c_3301,Glycine max,Glycine max,Crop (soja),especializacao,soja
+c_8504,Zea mays,Zea mays,Crop (milho),especializacao,milho
+c_7951,Triticum aestivum,Triticum aestivum,Crop (trigo),especializacao,trigo
+c_5438,Oryza sativa,Oryza sativa,Crop (arroz),especializacao,arroz
+c_14477,soybeans,soja,produto colhido da soja,produto,grão de soja
+c_12332,maize,milho,produto colhido do milho,produto,grão de milho
+c_6911,seasons,estação do ano,—,exemplo,estação do ano
